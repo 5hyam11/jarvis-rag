@@ -1,23 +1,15 @@
-fastapi==0.115.0
-uvicorn==0.30.6
-python-multipart==0.0.9
+streamlit==1.39.0
 
 llama-index==0.11.20
-llama-index-vector-stores-chroma==0.2.0
 llama-index-embeddings-openai==0.2.5
-llama-index-llms-openai==0.2.11
-
-chromadb==0.5.5
+llama-index-llms-groq
 
 pypdf==4.3.1
-python-dotenv==1.0.1
-streamlit==1.39.0
-requests==2.32.3
-gunicorn==21.2.0
+
 openai
-pydub
-soundfile
+
 streamlit-webrtc
 av
 numpy
-
+soundfile
+pydub
