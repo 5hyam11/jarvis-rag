@@ -1,3 +1,4 @@
+
 import os
 import tempfile
 import numpy as np
@@ -8,10 +9,8 @@ import av
 from streamlit_webrtc import webrtc_streamer, AudioProcessorBase
 
 from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
-from llama_index.embeddings.openai import OpenAIEmbedding
-from llama_index.llms.openai import OpenAI
-
-from openai import OpenAI as OpenAIClient
+from llama_index.llms.groq import Groq
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 
 # =========================================================
 # Page config
@@ -19,23 +18,28 @@ from openai import OpenAI as OpenAIClient
 st.set_page_config(page_title="Jarvis", layout="wide")
 
 st.title("🧠 Jarvis")
-st.caption("Live voice-enabled, memory-backed AI assistant")
+st.caption("Live voice-enabled, memory-backed AI assistant (Groq-powered)")
 
 # =========================================================
-# Load API key
+# Load API key (ONLY Groq)
 # =========================================================
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-if not OPENAI_API_KEY:
-    st.error("OPENAI_API_KEY not found.")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
+if not GROQ_API_KEY:
+    st.error("❌ GROQ_API_KEY not found. Add it to Streamlit / Render environment variables.")
     st.stop()
 
-client = OpenAIClient(api_key=OPENAI_API_KEY)
+# =========================================================
+# Initialize models
+# =========================================================
+llm = Groq(
+    model="llama3-70b-8192",
+    api_key=GROQ_API_KEY,
+)
 
-# =========================================================
-# Initialize LLM + embeddings
-# =========================================================
-llm = OpenAI(model="gpt-4o-mini", api_key=OPENAI_API_KEY)
-embed_model = OpenAIEmbedding(api_key=OPENAI_API_KEY)
+embed_model = HuggingFaceEmbedding(
+    model_name="sentence-transformers/all-MiniLM-L6-v2"
+)
 
 # =========================================================
 # Sidebar: Knowledge Base
@@ -54,7 +58,7 @@ if uploaded_files:
     for file in uploaded_files:
         with open(f"data/{file.name}", "wb") as f:
             f.write(file.read())
-    st.sidebar.success("Documents uploaded.")
+    st.sidebar.success("Documents uploaded")
 
 # =========================================================
 # Build / load index (cached)
@@ -79,7 +83,7 @@ for msg in st.session_state.messages:
     st.chat_message(msg["role"]).write(msg["content"])
 
 # =========================================================
-# 🎤 Live Microphone
+# 🎤 Live microphone (capture only, text-based)
 # =========================================================
 class AudioProcessor(AudioProcessorBase):
     def __init__(self):
@@ -100,28 +104,21 @@ webrtc_ctx = webrtc_streamer(
 
 prompt = None
 
-if webrtc_ctx.audio_processor and st.button("🛑 Stop & Send"):
+if webrtc_ctx.audio_processor and st.button("🛑 Stop Recording"):
     frames = webrtc_ctx.audio_processor.frames
-
     if frames:
         audio_data = np.concatenate(frames, axis=0)
 
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
             sf.write(tmp.name, audio_data, samplerate=48000)
 
-            with st.spinner("Listening..."):
-                transcript = client.audio.transcriptions.create(
-                    file=open(tmp.name, "rb"),
-                    model="gpt-4o-transcribe"
-                )
-
-        prompt = transcript.text
-        st.success(f"**You said:** {prompt}")
+        st.info("🎧 Audio recorded. (Speech-to-text disabled in free mode)")
+        st.warning("Type your message below to continue.")
 
 # =========================================================
-# 💬 Text input fallback
+# 💬 Text input
 # =========================================================
-text_prompt = st.chat_input("Or type to Jarvis...")
+text_prompt = st.chat_input("Ask Jarvis something...")
 
 if text_prompt:
     prompt = text_prompt
@@ -144,22 +141,7 @@ if prompt:
         st.session_state.messages.append(
             {"role": "assistant", "content": answer}
         )
-
         st.chat_message("assistant").write(answer)
-
-        # =================================================
-        # 🔊 Text-to-Speech
-        # =================================================
-        speech = client.audio.speech.create(
-            model="gpt-4o-mini-tts",
-            voice="alloy",
-            input=answer
-        )
-
-        with open("jarvis_reply.mp3", "wb") as f:
-            f.write(speech.read())
-
-        st.audio("jarvis_reply.mp3", format="audio/mp3")
 
     except Exception as e:
         st.error("Jarvis failed to respond.")
