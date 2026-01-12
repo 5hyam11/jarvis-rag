@@ -33,9 +33,10 @@ if not GROQ_API_KEY:
 # Initialize models
 # =========================================================
 llm = Groq(
-    model="llama3-70b-8192",
+    model="llama-3.1-70b-versatile",
     api_key=GROQ_API_KEY,
 )
+
 
 embed_model = HuggingFaceEmbedding(
     model_name="sentence-transformers/all-MiniLM-L6-v2",
