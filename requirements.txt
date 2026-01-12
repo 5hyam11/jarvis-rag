@@ -1,12 +1,10 @@
 streamlit==1.39.0
 
 llama-index==0.11.20
-llama-index-embeddings-openai==0.2.5
 llama-index-llms-groq
+llama-index-embeddings-huggingface
 
 pypdf==4.3.1
-
-openai
 
 streamlit-webrtc
 av
