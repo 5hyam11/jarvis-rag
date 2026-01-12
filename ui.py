@@ -38,8 +38,10 @@ llm = Groq(
 )
 
 embed_model = HuggingFaceEmbedding(
-    model_name="sentence-transformers/all-MiniLM-L6-v2"
+    model_name="sentence-transformers/all-MiniLM-L6-v2",
+    device="cpu"
 )
+
 
 # =========================================================
 # Sidebar: Knowledge Base
