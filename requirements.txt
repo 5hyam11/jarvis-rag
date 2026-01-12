@@ -17,3 +17,6 @@ gunicorn==21.2.0
 openai
 pydub
 soundfile
+streamlit-webrtc
+av
+numpy
