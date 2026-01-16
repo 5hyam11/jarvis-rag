@@ -1,4 +1,3 @@
-
 import os
 import tempfile
 import numpy as np
@@ -9,8 +8,8 @@ import av
 from streamlit_webrtc import webrtc_streamer, AudioProcessorBase
 
 from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
-from llama_index.llms.groq import Groq
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.llms.openai import OpenAI
+from llama_index.embeddings.openai import OpenAIEmbedding
 
 # =========================================================
 # Page config
@@ -18,31 +17,29 @@ from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 st.set_page_config(page_title="Jarvis", layout="wide")
 
 st.title("🧠 Jarvis")
-st.caption("Live voice-enabled, memory-backed AI assistant (Groq-powered)")
+st.caption("Voice-enabled, memory-backed AI assistant (OpenAI-powered)")
 
 # =========================================================
-# Load API key (ONLY Groq)
+# Load OpenAI API key
 # =========================================================
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-if not GROQ_API_KEY:
-    st.error("❌ GROQ_API_KEY not found. Add it to Streamlit / Render environment variables.")
+if not OPENAI_API_KEY:
+    st.error("❌ OPENAI_API_KEY not found in Streamlit Secrets")
     st.stop()
 
 # =========================================================
-# Initialize models
+# Initialize OpenAI models
 # =========================================================
-llm = Groq(
-    model="llama-3.1-70b-versatile",
-    api_key=GROQ_API_KEY,
+llm = OpenAI(
+    model="gpt-4o-mini",
+    api_key=OPENAI_API_KEY,
 )
 
-
-embed_model = HuggingFaceEmbedding(
-    model_name="sentence-transformers/all-MiniLM-L6-v2",
-    device="cpu"
+embed_model = OpenAIEmbedding(
+    model="text-embedding-3-small",
+    api_key=OPENAI_API_KEY,
 )
-
 
 # =========================================================
 # Sidebar: Knowledge Base
@@ -86,15 +83,14 @@ for msg in st.session_state.messages:
     st.chat_message(msg["role"]).write(msg["content"])
 
 # =========================================================
-# 🎤 Live microphone (capture only, text-based)
+# 🎤 Live microphone (record-only for now)
 # =========================================================
 class AudioProcessor(AudioProcessorBase):
     def __init__(self):
         self.frames = []
 
     def recv(self, frame: av.AudioFrame):
-        audio = frame.to_ndarray()
-        self.frames.append(audio)
+        self.frames.append(frame.to_ndarray())
         return frame
 
 st.subheader("🎤 Live Microphone")
@@ -115,8 +111,8 @@ if webrtc_ctx.audio_processor and st.button("🛑 Stop Recording"):
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
             sf.write(tmp.name, audio_data, samplerate=48000)
 
-        st.info("🎧 Audio recorded. (Speech-to-text disabled in free mode)")
-        st.warning("Type your message below to continue.")
+        st.info("🎧 Audio recorded (speech-to-text coming next)")
+        st.warning("Type your message below to continue")
 
 # =========================================================
 # 💬 Text input
@@ -147,5 +143,5 @@ if prompt:
         st.chat_message("assistant").write(answer)
 
     except Exception as e:
-        st.error("Jarvis failed to respond.")
+        st.error("Jarvis failed to respond")
         st.exception(e)
